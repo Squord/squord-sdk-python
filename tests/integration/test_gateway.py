@@ -12,7 +12,9 @@ TOKEN = "sqb_1300000000000000010.segredo"
 
 
 def make_gateway(**kwargs) -> tuple[Gateway, object]:
-    server = create_mock_gateway(heartbeat_interval_ms=kwargs.pop("heartbeat_interval_ms", 200), **kwargs)
+    server = create_mock_gateway(
+        heartbeat_interval_ms=kwargs.pop("heartbeat_interval_ms", 200), **kwargs
+    )
     gateway = Gateway(
         TOKEN,
         connector=server.ws_connector,
@@ -85,12 +87,25 @@ class TestCicloDeVida:
 
         server.close_all(4009, "session timeout")
         server.emit_event("message.deleted", {"messageId": "1", "channelId": "c", "guildId": "g"})
-        server.emit_event("reaction.added", {"messageId": "1", "channelId": "c", "guildId": "g", "userId": "u", "reaction": {"emoji": "👍", "count": 1, "userIds": ["u"], "me": False}, "customEmoji": None})
+        server.emit_event(
+            "reaction.added",
+            {
+                "messageId": "1",
+                "channelId": "c",
+                "guildId": "g",
+                "userId": "u",
+                "reaction": {"emoji": "👍", "count": 1, "userIds": ["u"], "me": False},
+                "customEmoji": None,
+            },
+        )
 
         resumed = asyncio.Event()
         gateway.on("resumed", lambda data: resumed.set())
         replayed: list[str] = []
-        gateway.on("event", lambda t, d, s, ts: replayed.append(str(t)) if (s or 0) > last_sequence else None)
+        gateway.on(
+            "event",
+            lambda t, d, s, ts: replayed.append(str(t)) if (s or 0) > last_sequence else None,
+        )
 
         await asyncio.wait_for(resumed.wait(), timeout=5)
         assert gateway.session_id is not None

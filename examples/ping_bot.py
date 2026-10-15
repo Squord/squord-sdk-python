@@ -7,6 +7,7 @@
 """
 
 import asyncio
+import contextlib
 import logging
 import os
 
@@ -45,7 +46,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    try:
+    with contextlib.suppress(KeyboardInterrupt):
         asyncio.run(main())
-    except KeyboardInterrupt:
-        pass

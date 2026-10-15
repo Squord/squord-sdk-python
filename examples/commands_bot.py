@@ -9,6 +9,7 @@ python commands_bot.py
 """
 
 import asyncio
+import contextlib
 import logging
 import os
 
@@ -38,13 +39,17 @@ commands.text(squord.TextCommandDefinition(name="ping", execute=_ping))
 async def _avatar(context: squord.TextCommandContext) -> None:
     message = context.message
     target_id = message.mentioned_user_ids[0] if message.mentioned_user_ids else message.author_id
-    member = (
-        await client.members.fetch(message.guild_id, target_id) if message.guild_id else None
+    member = await client.members.fetch(message.guild_id, target_id) if message.guild_id else None
+    display_name = (
+        member["nickname"]
+        if member and member.get("nickname")
+        else ((member or {}).get("user", {}).get("displayName") or message.author_display_name)
     )
-    display_name = member["nickname"] if member and member.get("nickname") else (
-        (member or {}).get("user", {}).get("displayName") or message.author_display_name
+    avatar = (
+        (member or {}).get("avatarUrl")
+        or (member or {}).get("user", {}).get("avatarUrl")
+        or message.author.avatar_url
     )
-    avatar = (member or {}).get("avatarUrl") or (member or {}).get("user", {}).get("avatarUrl") or message.author.avatar_url
     embed = squord.EmbedBuilder().set_title(f"Avatar de {display_name}").set_color(0xF5A623)
     if avatar:
         embed.set_image(avatar)
@@ -100,7 +105,14 @@ commands.slash(
     squord.SlashCommandDefinition(
         name="eco",
         description="Repete o que você disse",
-        options=[{"type": "STRING", "name": "texto", "description": "O texto a repetir", "required": True}],
+        options=[
+            {
+                "type": "STRING",
+                "name": "texto",
+                "description": "O texto a repetir",
+                "required": True,
+            }
+        ],
         execute=_eco,
     )
 )
@@ -163,7 +175,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    try:
+    with contextlib.suppress(KeyboardInterrupt):
         asyncio.run(main())
-    except KeyboardInterrupt:
-        pass

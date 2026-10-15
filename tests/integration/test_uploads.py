@@ -18,7 +18,12 @@ def upload_routes(rest) -> dict:
         assert body["guildId"] == "1300000000000000001"
         assert body["size"] == len(CONTENT)
         state["filename"] = body["filename"]
-        return {"status": 201, "body": fixtures.upload_reservation({"filename": body["filename"], "size": len(CONTENT)})}
+        return {
+            "status": 201,
+            "body": fixtures.upload_reservation(
+                {"filename": body["filename"], "size": len(CONTENT)}
+            ),
+        }
 
     def put_bytes(match):
         state["put"] = {
@@ -72,7 +77,8 @@ class TestUploadCompleto:
         assert state["confirmed"] == 2
 
         await client.messages.send(
-            "1300000000000000040", {"content": "Segue o relatório.", "attachmentIds": [upload["id"]]}
+            "1300000000000000040",
+            {"content": "Segue o relatório.", "attachmentIds": [upload["id"]]},
         )
         assert sent["attachmentIds"] == [upload["id"]]
         await client.destroy()
@@ -99,7 +105,11 @@ class TestUploadCompleto:
         rest.on("POST", "/uploads", reserve)
         rest.on("PUT", "/attachments/:key", lambda m: {"status": 500, "body": "boom"})
         confirmed = []
-        rest.on("POST", "/uploads/:id/confirm", lambda m: confirmed.append(1) or {"status": 200, "body": {}})
+        rest.on(
+            "POST",
+            "/uploads/:id/confirm",
+            lambda m: confirmed.append(1) or {"status": 200, "body": {}},
+        )
 
         client = SquordClient(token=TOKEN, **env.client_kwargs())
         await client.login()
@@ -130,7 +140,10 @@ class TestChannelSendFile:
 
         def send(match):
             sent.update(match.body)
-            return {"status": 201, "body": fixtures.message({"content": (match.body or {}).get("content", "")})}
+            return {
+                "status": 201,
+                "body": fixtures.message({"content": (match.body or {}).get("content", "")}),
+            }
 
         env.rest.on("POST", "/channels/:channel_id/messages", send)
         client = SquordClient(token=TOKEN, **env.client_kwargs())
@@ -139,7 +152,9 @@ class TestChannelSendFile:
         channel = await client.channels.fetch("1300000000000000040")
         from squord.models import Channel
 
-        message = await Channel(client, channel).send_file(data=CONTENT, filename="a.txt", content="olá")
+        message = await Channel(client, channel).send_file(
+            data=CONTENT, filename="a.txt", content="olá"
+        )
         assert message.content == "olá"
         assert sent["attachmentIds"] == ["1300000000000000300"]
         assert state["confirmed"] == 1

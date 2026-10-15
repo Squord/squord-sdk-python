@@ -45,7 +45,10 @@ class TestLogin:
         env = create_mock_environment()
         env.rest.get(
             "/bots/@me",
-            lambda m: {"status": 401, "body": {"code": "INVALID_TOKEN", "message": "Invalid token"}},
+            lambda m: {
+                "status": 401,
+                "body": {"code": "INVALID_TOKEN", "message": "Invalid token"},
+            },
         )
         client = SquordClient(token=TOKEN, **env.client_kwargs())
         with pytest.raises(SquordAPIError) as info:
@@ -80,7 +83,9 @@ class TestEventos:
         client.on("message.created", on_message)
         await client.login()
 
-        env.gateway.emit_event("message.created", {"message": fixtures.message({"content": "!ping"})})
+        env.gateway.emit_event(
+            "message.created", {"message": fixtures.message({"content": "!ping"})}
+        )
         await asyncio.wait_for(received.wait(), timeout=2)
         message = message_holder["message"]
         assert message.content == "!ping"
@@ -110,7 +115,11 @@ class TestEventos:
 
         env.gateway.emit_event(
             "message.deleted",
-            {"messageId": "1300000000000000100", "channelId": "1300000000000000040", "guildId": "1300000000000000001"},
+            {
+                "messageId": "1300000000000000100",
+                "channelId": "1300000000000000040",
+                "guildId": "1300000000000000001",
+            },
         )
         await asyncio.wait_for(received.wait(), timeout=2)
         assert holder["payload"]["messageId"] == "1300000000000000100"
@@ -167,7 +176,9 @@ class TestEventos:
         client.on("member.joined", on_join)
         await client.login()
 
-        env.gateway.emit_event("member.joined", {"guildId": "1300000000000000001", "member": fixtures.member()})
+        env.gateway.emit_event(
+            "member.joined", {"guildId": "1300000000000000001", "member": fixtures.member()}
+        )
         await asyncio.wait_for(received.wait(), timeout=2)
         member: squord.Member = holder["data"]["member"]
         assert member.user.username == "ana"
@@ -219,7 +230,13 @@ class TestInteracoes:
         env.gateway.emit_event(
             "interaction.created",
             fixtures.command_interaction(
-                {"command": {"id": "500", "name": "eco", "options": [{"name": "texto", "type": "STRING", "value": "olá"}]}}
+                {
+                    "command": {
+                        "id": "500",
+                        "name": "eco",
+                        "options": [{"name": "texto", "type": "STRING", "value": "olá"}],
+                    }
+                }
             ),
         )
         await asyncio.wait_for(seen_command.wait(), timeout=2)
@@ -253,34 +270,47 @@ class TestComandosDeTexto:
             await context.reply("ok")
 
         commands.text(
-            squord.TextCommandDefinition(name="ban", aliases=["b"], cooldown_ms=60_000, execute=execute)
+            squord.TextCommandDefinition(
+                name="ban", aliases=["b"], cooldown_ms=60_000, execute=execute
+            )
         )
         await client.login()
 
         # Alias + aspas
-        env.gateway.emit_event("message.created", {"message": fixtures.message({"content": '!b @ana "spam reincidente" 7d'})})
+        env.gateway.emit_event(
+            "message.created",
+            {"message": fixtures.message({"content": '!b @ana "spam reincidente" 7d'})},
+        )
         await asyncio.sleep(0.15)
         assert len(calls) == 1
         assert calls[0]["args"] == ["@ana", "spam reincidente", "7d"]
 
         # Cooldown bloqueia a segunda imediata
-        env.gateway.emit_event("message.created", {"message": fixtures.message({"content": "!ban @bob"})})
+        env.gateway.emit_event(
+            "message.created", {"message": fixtures.message({"content": "!ban @bob"})}
+        )
         await asyncio.sleep(0.15)
         assert len(calls) == 1
 
         # Sem prefixo não invoca
-        env.gateway.emit_event("message.created", {"message": fixtures.message({"content": "ban x"})})
+        env.gateway.emit_event(
+            "message.created", {"message": fixtures.message({"content": "ban x"})}
+        )
         await asyncio.sleep(0.1)
         assert len(calls) == 1
 
         # Comando desconhecido não invoca
-        env.gateway.emit_event("message.created", {"message": fixtures.message({"content": "!desconhecido"})})
+        env.gateway.emit_event(
+            "message.created", {"message": fixtures.message({"content": "!desconhecido"})}
+        )
         await asyncio.sleep(0.1)
         assert len(calls) == 1
 
         # Depois do cooldown limpo, invoca de novo
         commands.clear_cooldowns()
-        env.gateway.emit_event("message.created", {"message": fixtures.message({"content": "!ban @bob"})})
+        env.gateway.emit_event(
+            "message.created", {"message": fixtures.message({"content": "!ban @bob"})}
+        )
         await asyncio.sleep(0.15)
         assert len(calls) == 2
         await client.destroy()
@@ -297,13 +327,18 @@ class TestComandosDeTexto:
         await client.login()
 
         other_bot = fixtures.message(
-            {"content": "!ping", "author": fixtures.bot_user({"id": "999", "username": "bot~outro"})}
+            {
+                "content": "!ping",
+                "author": fixtures.bot_user({"id": "999", "username": "bot~outro"}),
+            }
         )
         env.gateway.emit_event("message.created", {"message": other_bot})
         await asyncio.sleep(0.1)
         assert calls == []
 
-        env.gateway.emit_event("message.created", {"message": fixtures.message({"content": "!ping"})})
+        env.gateway.emit_event(
+            "message.created", {"message": fixtures.message({"content": "!ping"})}
+        )
         await asyncio.sleep(0.15)
         assert calls == ["!ping"]
         await client.destroy()
@@ -326,7 +361,9 @@ class TestComandosDeTexto:
         commands.text(squord.TextCommandDefinition(name="boom", execute=explode))
         await client.login()
 
-        env.gateway.emit_event("message.created", {"message": fixtures.message({"content": "!boom"})})
+        env.gateway.emit_event(
+            "message.created", {"message": fixtures.message({"content": "!boom"})}
+        )
         await asyncio.wait_for(errored.wait(), timeout=2)
         assert "boom comando" in str(holder["error"])
         await client.destroy()

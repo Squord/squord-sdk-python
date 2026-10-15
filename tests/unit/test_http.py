@@ -84,14 +84,20 @@ class TestBasico:
     async def test_rota_publica_sem_authorization(self):
         client, mock = make_rest()
         mock.on("POST", "/interactions/:id/:token/callback", lambda m: {"status": 204})
-        await client.post("/interactions/i1/tk/callback", {"type": "MESSAGE"}, RequestOptions(auth=False))
+        await client.post(
+            "/interactions/i1/tk/callback", {"type": "MESSAGE"}, RequestOptions(auth=False)
+        )
         assert "Authorization" not in mock.last_call.headers  # type: ignore[attr-defined]
 
 
 class TestMapeamentoDeErros:
     async def test_401_vira_authentication_error(self):
         client, mock = make_rest()
-        mock.on("GET", "/x", lambda m: {"status": 401, "body": {"code": "INVALID_TOKEN", "message": "no"}})
+        mock.on(
+            "GET",
+            "/x",
+            lambda m: {"status": 401, "body": {"code": "INVALID_TOKEN", "message": "no"}},
+        )
         with pytest.raises(AuthenticationError) as info:
             await client.get("/x")
         assert info.value.code == "INVALID_TOKEN"
@@ -99,34 +105,46 @@ class TestMapeamentoDeErros:
 
     async def test_403_com_detalhe_da_permissao(self):
         client, mock = make_rest()
-        mock.on("GET", "/x", lambda m: {
-            "status": 403,
-            "body": {
-                "code": "MISSING_PERMISSION",
-                "message": "Missing permission: SEND_MESSAGES",
-                "details": {"permission": "SEND_MESSAGES"},
+        mock.on(
+            "GET",
+            "/x",
+            lambda m: {
+                "status": 403,
+                "body": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Missing permission: SEND_MESSAGES",
+                    "details": {"permission": "SEND_MESSAGES"},
+                },
             },
-        })
+        )
         with pytest.raises(PermissionError) as info:
             await client.get("/x")
         assert info.value.missing_permission == "SEND_MESSAGES"
 
     async def test_404_vira_not_found(self):
         client, mock = make_rest()
-        mock.on("GET", "/x", lambda m: {"status": 404, "body": {"code": "NOT_FOUND", "message": "não"}})
+        mock.on(
+            "GET", "/x", lambda m: {"status": 404, "body": {"code": "NOT_FOUND", "message": "não"}}
+        )
         with pytest.raises(NotFoundError):
             await client.get("/x")
 
     async def test_422_validacao_com_issues(self):
         client, mock = make_rest()
-        mock.on("POST", "/x", lambda m: {
-            "status": 422,
-            "body": {
-                "code": "VALIDATION_FAILED",
-                "message": "Request payload failed validation",
-                "details": [{"path": "embeds.0.title", "code": "TOO_LONG", "message": "Too long"}],
+        mock.on(
+            "POST",
+            "/x",
+            lambda m: {
+                "status": 422,
+                "body": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Request payload failed validation",
+                    "details": [
+                        {"path": "embeds.0.title", "code": "TOO_LONG", "message": "Too long"}
+                    ],
+                },
             },
-        })
+        )
         with pytest.raises(ValidationError) as info:
             await client.post("/x", {})
         assert info.value.issues[0]["path"] == "embeds.0.title"
@@ -148,8 +166,11 @@ class TestPoliticaDeRetentativas:
             if len(calls) == 1:
                 return {
                     "status": 429,
-                    "body": {"code": "RATE_LIMITED", "message": "slow down",
-                             "details": {"bucket": "DEFAULT", "retryAfter": 1}},
+                    "body": {
+                        "code": "RATE_LIMITED",
+                        "message": "slow down",
+                        "details": {"bucket": "DEFAULT", "retryAfter": 1},
+                    },
                 }
             return {"status": 200, "body": {"ok": True}}
 
@@ -160,11 +181,18 @@ class TestPoliticaDeRetentativas:
 
     async def test_429_esgotado_vira_rate_limit_error(self):
         client, mock = make_rest()
-        mock.on("GET", "/x", lambda m: {
-            "status": 429,
-            "body": {"code": "RATE_LIMITED", "message": "slow",
-                     "details": {"bucket": "DEFAULT", "retryAfter": 1}},
-        })
+        mock.on(
+            "GET",
+            "/x",
+            lambda m: {
+                "status": 429,
+                "body": {
+                    "code": "RATE_LIMITED",
+                    "message": "slow",
+                    "details": {"bucket": "DEFAULT", "retryAfter": 1},
+                },
+            },
+        )
         client.max_retries = 1
         with pytest.raises(RateLimitError) as info:
             await client.get("/x")
@@ -211,7 +239,9 @@ class TestPoliticaDeRetentativas:
 
         mock.on("POST", "/channels/:id/messages", handler)
         result = await client.post(
-            "/channels/c1/messages", {"content": "oi", "nonce": "fixo"}, RequestOptions(retryable=True)
+            "/channels/c1/messages",
+            {"content": "oi", "nonce": "fixo"},
+            RequestOptions(retryable=True),
         )
         assert result == {"nonce": "fixo"}
         assert [b["nonce"] for b in bodies] == ["fixo", "fixo"]
@@ -318,7 +348,10 @@ class TestRateLimitsLocais:
 
 class TestRouteKey:
     def test_substitui_ids(self):
-        assert route_key_of("POST", "/channels/1300000000000000040/messages") == "POST /channels/{id}/messages"
+        assert (
+            route_key_of("POST", "/channels/1300000000000000040/messages")
+            == "POST /channels/{id}/messages"
+        )
         assert route_key_of("PUT", "/guilds/12345/bans/67890") == "PUT /guilds/{id}/bans/{id}"
 
     def test_nao_troca_at_me(self):

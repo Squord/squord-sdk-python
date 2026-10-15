@@ -132,7 +132,9 @@ def resolve_channel_permissions(
 
     # Cargos do membro, acumulados: primeiro todos os deny, depois os allow.
     role_overwrites = [
-        o for o in normalized_overwrites if o.get("targetType") == "ROLE" and o.get("targetId") in member_role_ids
+        o
+        for o in normalized_overwrites
+        if o.get("targetType") == "ROLE" and o.get("targetId") in member_role_ids
     ]
     deny = 0
     allow = 0

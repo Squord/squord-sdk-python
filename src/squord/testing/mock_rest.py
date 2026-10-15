@@ -73,7 +73,9 @@ class MockRest:
         """
         segments = [s for s in pattern.split("/") if s]
         self._routes = [
-            route for route in self._routes if not (route[0] == method.upper() and route[1] == segments)
+            route
+            for route in self._routes
+            if not (route[0] == method.upper() and route[1] == segments)
         ]
         self._routes.append((method.upper(), segments, handler))
         return self

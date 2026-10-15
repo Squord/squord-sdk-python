@@ -143,7 +143,9 @@ class TestResolveMessagePayload:
     def test_builders_e_mencoes_seguras(self):
         embed = EmbedBuilder().set_title("t")
         row = ActionRowBuilder().add_button(Buttons.primary("ok").set_custom_id("ok"))
-        payload = resolve_message_payload({"content": "Atualização", "embeds": [embed], "components": [row]})
+        payload = resolve_message_payload(
+            {"content": "Atualização", "embeds": [embed], "components": [row]}
+        )
         assert payload["embeds"] == [{"title": "t"}]
         assert payload["components"][0]["components"][0]["customId"] == "ok"
         assert payload["allowedMentions"] == {"users": True, "roles": False, "everyone": False}

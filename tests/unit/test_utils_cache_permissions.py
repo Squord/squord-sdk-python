@@ -1,6 +1,5 @@
 """Testes unitários: utils, cache, permissões, intents e logger."""
 
-
 import pytest
 
 from squord.cache import Cache
@@ -214,7 +213,9 @@ class TestLoggerRedaction:
         )
 
     def test_redige_token_sozinho(self):
-        assert "sqb_1300000000000000010.SEGREDO" not in redact("log com sqb_1300000000000000010.SEGREDO")
+        assert "sqb_1300000000000000010.SEGREDO" not in redact(
+            "log com sqb_1300000000000000010.SEGREDO"
+        )
 
     def test_redige_json_token(self):
         assert redact('{"token": "tk_1b3d5f7a9c2e"}') == '{"token":"[REDACTED]"}'
