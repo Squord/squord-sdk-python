@@ -1,0 +1,66 @@
+name: Publicar no PyPI
+
+# Publica squord.py no PyPI a partir de um Release do GitHub, com
+# **trusted publishing** (OIDC): nenhum secret fica no repositório.
+#
+# Configuração única (na conta Squord do PyPI): adicione um *pending
+# trusted publisher* em https://pypi.org/manage/account/publishing/:
+#
+#   PyPI project name : squord.py
+#   Owner             : Squord (organização)
+#   Repository        : squord-sdk-python
+#   Workflow          : publish.yml
+#   Environment       : pypi
+#
+# E crie o environment "pypi" nas configurações do repositório GitHub
+# (Settings → Environments) com a proteção desejada.
+#
+# Fluxo de release:
+#   1. Atualize a version em pyproject.toml e o CHANGELOG.md
+#   2. Commit e tag: git tag vX.Y.Z && git push --tags
+#   3. Crie o Release do GitHub — este workflow constrói e publica no PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write # OIDC para o trusted publishing do PyPI
+
+jobs:
+  publish:
+    name: Build e publish
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Sincronizar dependências
+        run: uv sync --locked
+
+      - name: Lint e tipagem
+        run: |
+          uv run ruff check src/ tests/ examples/
+          uv run ruff format --check src/ tests/ examples/
+          uv run mypy src/
+
+      - name: Testes
+        run: uv run pytest
+
+      - name: Build (wheel + sdist)
+        run: uv build
+
+      - name: Publicar no PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # O trusted publishing dispensa token; falha se o publisher não
+          # estiver aprovado no PyPI — o erro explica exatamente o que falta.
+          print-hash: true

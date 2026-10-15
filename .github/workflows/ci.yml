@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    name: Verificar (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+
+      - name: Sincronizar dependências
+        run: uv sync --locked
+
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check src/ tests/ examples/
+          uv run ruff format --check src/ tests/ examples/
+
+      - name: Tipagem (mypy strict)
+        run: uv run mypy src/
+
+      - name: Testes (unit + integração com gateway simulado)
+        run: uv run pytest
+
+      - name: Build (wheel + sdist)
+        run: uv build
+
+      - name: Smoke do wheel em venv limpo
+        working-directory: examples
+        run: |
+          python -m venv /tmp/smoke-venv
+          /tmp/smoke-venv/bin/pip install --quiet ../dist/*.whl
+          /tmp/smoke-venv/bin/python - << 'PY'
+          import asyncio
+          import squord
+          from squord.testing import create_mock_environment, fixtures
+
+          async def main() -> None:
+              env = create_mock_environment(heartbeat_interval_ms=200)
+              client = squord.SquordClient(
+                  token="sqb_1300000000000000010.demo", **env.client_kwargs()
+              )
+              pong = []
+
+              @client.on("message.created")
+              async def _(message):
+                  if message.content == "!ping":
+                      pong.append((await message.reply("Pong!")).content)
+
+              await client.login()
+              env.gateway.emit_event(
+                  "message.created", {"message": fixtures.message({"content": "!ping"})}
+              )
+              await asyncio.sleep(0.3)
+              assert pong == ["Pong!"], pong
+              await client.destroy()
+              print("smoke do wheel OK")
+
+          asyncio.run(main())
+          PY
